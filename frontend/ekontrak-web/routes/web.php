@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AbmPptController;
+use App\Http\Controllers\AbmV3Controller;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AuditTrailController;
 use App\Http\Controllers\DashboardController;
@@ -92,34 +93,53 @@ Route::middleware('auth.session')->group(function () {
     });
 
     // ── Perancangan Perolehan (ABM/PPT) ────────────────────────────────────────
+    Route::prefix('abm-v3')->group(function () {
+        Route::get('/dashboard', [AbmV3Controller::class, 'dashboard'])->name('abm.v3.dashboard');
+        Route::get('/import', [AbmV3Controller::class, 'import'])->name('abm.v3.import');
+        Route::post('/upload', [AbmV3Controller::class, 'upload'])->name('abm.v3.upload');
+        Route::get('/summary', [AbmV3Controller::class, 'summary'])->name('abm.v3.summary');
+        Route::get('/repository', [AbmV3Controller::class, 'repository'])->name('abm.v3.repository');
+        Route::get('/audit-trail', [AbmV3Controller::class, 'auditTrail'])->name('abm.v3.audit');
+        Route::get('/{upload}/preview', [AbmV3Controller::class, 'preview'])->name('abm.v3.preview');
+        Route::get('/{upload}/extract', [AbmV3Controller::class, 'getExtractedData'])->name('abm.v3.extract');
+
+        Route::prefix('ppt')->group(function () {
+            Route::get('/dashboard', [AbmV3Controller::class, 'pptDashboard'])->name('abm.v3.ppt.dashboard');
+            Route::get('/import', [AbmV3Controller::class, 'pptImport'])->name('abm.v3.ppt.import');
+            Route::get('/summary', [AbmV3Controller::class, 'pptSummary'])->name('abm.v3.ppt.summary');
+            Route::get('/repository', [AbmV3Controller::class, 'pptRepository'])->name('abm.v3.ppt.repository');
+            Route::get('/status-proses', [AbmV3Controller::class, 'pptStatus'])->name('abm.v3.ppt.status');
+            Route::get('/audit-trail', [AbmV3Controller::class, 'pptAudit'])->name('abm.v3.ppt.audit');
+        });
+    });
+
     Route::prefix('perancangan-perolehan')->group(function () {
-        // Dashboard
+        // New ABM V2 entry points
+        Route::get('/dashboard-abm-v2',     [AbmPptController::class, 'dashboardV2'])->name('abm.v2.dashboard');
+        Route::get('/import-abm',           [AbmPptController::class, 'uploadPage'])->name('abm.v2.import');
+        Route::get('/repository-abm',       [AbmPptController::class, 'repositoryV2'])->name('abm.v2.repository');
+        Route::get('/ringkasan-abm',        [AbmPptController::class, 'summaryV2'])->name('abm.v2.summary');
+        Route::get('/semakan-abm',          [AbmPptController::class, 'reviewV2'])->name('abm.v2.review');
+        Route::get('/kelulusan-abm',        [AbmPptController::class, 'approvalV2'])->name('abm.v2.approval');
+        Route::get('/audit-trail-abm',      [AbmPptController::class, 'auditTrailV2'])->name('abm.v2.audit');
+
+        // Legacy compatibility routes
         Route::get('/dashboard-abm',      [AbmPptController::class, 'dashboard'])->name('abm.dashboard');
-        
-        // Management
         Route::get('/pengurusan-abm',     [AbmPptController::class, 'management'])->name('abm.management');
         Route::get('/pengurusan-ppt',     [AbmPptController::class, 'managementPpt'])->name('abm.management.ppt');
-        
-        // Upload
         Route::get('/import',             [AbmPptController::class, 'uploadPage'])->name('abm.upload');
         Route::post('/upload',            [AbmPptController::class, 'handleUpload'])->name('abm.upload.handle');
-        
-        // Preview & Verification
         Route::get('/{upload}/preview',   [AbmPptController::class, 'preview'])->name('abm.preview');
         Route::get('/{upload}/extracted-data', [AbmPptController::class, 'getExtractedData']);
         Route::post('/{upload}/draft',    [AbmPptController::class, 'saveDraft']);
         Route::post('/{upload}/submit',   [AbmPptController::class, 'submitForVerification']);
         Route::post('/{upload}/approve',  [AbmPptController::class, 'approve']);
         Route::post('/{upload}/reject',   [AbmPptController::class, 'reject']);
-        
-        // Repository
         Route::get('/repository',         [AbmPptController::class, 'repository'])->name('abm.repository');
         Route::get('/fetch-documents',    [AbmPptController::class, 'fetchDocuments']);
         Route::get('/{upload}/view',      [AbmPptController::class, 'viewDocument']);
         Route::get('/{upload}/viewer',    [AbmPptController::class, 'viewer'])->name('abm.viewer');
         Route::get('/{upload}/download',  [AbmPptController::class, 'downloadDocument'])->name('abm.download');
-        
-        // Workflow
         Route::get('/status-proses',      [AbmPptController::class, 'statusProses'])->name('abm.status-proses');
         Route::get('/{upload}/workflow',  [AbmPptController::class, 'workflowStatus'])->name('abm.workflow');
         Route::get('/{upload}/progress',  [AbmPptController::class, 'getWorkflowProgress']);

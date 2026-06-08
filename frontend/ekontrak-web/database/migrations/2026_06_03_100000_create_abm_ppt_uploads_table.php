@@ -30,7 +30,7 @@ return new class extends Migration
             $table->string('department')->nullable()->comment('Bahagian/Unit');
             $table->string('officer_name')->nullable()->comment('Pegawai name');
             $table->timestamps();
-            
+
             // Indexes
             $table->index('template_type');
             $table->index('status');

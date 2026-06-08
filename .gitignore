@@ -1,0 +1,51 @@
+# ── OS / Editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log
+
+.idea/
+.vscode/
+.cursor/
+.nova/
+.zed/
+*.swp
+*.swo
+
+# ── Root PHP vendor (root composer.json) ──────────────────────────────────────
+/vendor/
+
+# ── Docker secrets (never commit real credentials) ────────────────────────────
+.env.docker
+.env.*.local
+
+# ── Laravel app envs (each app has its own .gitignore, belt-and-suspenders) ───
+frontend/ekontrak-web/.env
+frontend/ekontrak-web/.env.*
+!frontend/ekontrak-web/.env.example
+
+backend/ekontrak-api/.env
+backend/ekontrak-api/.env.*
+!backend/ekontrak-api/.env.example
+
+# ── Laravel app generated / runtime artifacts ─────────────────────────────────
+frontend/ekontrak-web/vendor/
+frontend/ekontrak-web/node_modules/
+frontend/ekontrak-web/public/build/
+frontend/ekontrak-web/public/hot
+frontend/ekontrak-web/public/storage
+frontend/ekontrak-web/storage/*.key
+frontend/ekontrak-web/storage/pail/
+frontend/ekontrak-web/bootstrap/cache/*.php
+frontend/ekontrak-web/.phpunit.cache/
+frontend/ekontrak-web/.phpunit.result.cache
+
+backend/ekontrak-api/vendor/
+backend/ekontrak-api/node_modules/
+backend/ekontrak-api/public/build/
+backend/ekontrak-api/public/hot
+backend/ekontrak-api/public/storage
+backend/ekontrak-api/storage/*.key
+backend/ekontrak-api/storage/pail/
+backend/ekontrak-api/bootstrap/cache/*.php
+backend/ekontrak-api/.phpunit.cache/
+backend/ekontrak-api/.phpunit.result.cache

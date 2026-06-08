@@ -1,0 +1,122 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# TEST / PRODUCTION (AWS Lightsail)
+# Pulls pre-built images from Docker Hub.
+#
+# On AWS Lightsail:
+#   1. Copy this file and .env.docker.example to the server
+#   2. cp .env.docker.example .env.docker  &&  nano .env.docker
+#   3. docker login
+#   4. docker compose -f docker-compose.prod.yml --env-file .env.docker pull
+#   5. docker compose -f docker-compose.prod.yml --env-file .env.docker up -d
+#
+# Building & pushing images (from your dev machine):
+#   docker build -t <DOCKERHUB_USERNAME>/ekontrak-backend:latest ./backend/ekontrak-api
+#   docker build -t <DOCKERHUB_USERNAME>/ekontrak-frontend:latest ./frontend/ekontrak-web
+#   docker push <DOCKERHUB_USERNAME>/ekontrak-backend:latest
+#   docker push <DOCKERHUB_USERNAME>/ekontrak-frontend:latest
+# ─────────────────────────────────────────────────────────────────────────────
+name: ekontrak
+
+services:
+
+  # ── MySQL 8 ──────────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: ekontrak_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE:      ${DB_DATABASE}
+      MYSQL_USER:          ${DB_USERNAME}
+      MYSQL_PASSWORD:      ${DB_PASSWORD}
+    # MySQL is NOT exposed publicly in production — only accessible inside ekontrak_net
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1",
+             "-uroot", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - ekontrak_net
+
+  # ── Backend API ───────────────────────────────────────────────────────────
+  backend:
+    image: ${DOCKERHUB_USERNAME}/ekontrak-backend:${IMAGE_TAG:-latest}
+    container_name: ekontrak_backend
+    restart: always
+    environment:
+      APP_NAME:    "eKontrak-API"
+      APP_ENV:     production
+      APP_KEY:     ${BACKEND_APP_KEY}
+      APP_DEBUG:   "false"
+      APP_URL:     "http://${SERVER_IP}:8001"
+      DB_CONNECTION: mysql
+      DB_HOST:       mysql
+      DB_PORT:       3306
+      DB_DATABASE:   ${DB_DATABASE}
+      DB_USERNAME:   ${DB_USERNAME}
+      DB_PASSWORD:   ${DB_PASSWORD}
+      QUEUE_CONNECTION: database
+      MAIL_MAILER:      ${MAIL_MAILER:-log}
+      MAIL_HOST:        ${MAIL_HOST:-}
+      MAIL_PORT:        ${MAIL_PORT:-587}
+      MAIL_USERNAME:    ${MAIL_USERNAME:-}
+      MAIL_PASSWORD:    ${MAIL_PASSWORD:-}
+      MAIL_FROM_ADDRESS: noreply@kpkt.gov.my
+      MAIL_FROM_NAME:    "eKontrak KPKT"
+      SANCTUM_STATEFUL_DOMAINS: "${SERVER_IP}:8000"
+      CORS_ALLOWED_ORIGINS:     "http://${SERVER_IP}:8000"
+    volumes:
+      - backend_storage:/var/www/html/storage/app
+      - backend_logs:/var/www/html/storage/logs
+    ports:
+      - "8001:80"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - ekontrak_net
+
+  # ── Frontend Web ──────────────────────────────────────────────────────────
+  frontend:
+    image: ${DOCKERHUB_USERNAME}/ekontrak-frontend:${IMAGE_TAG:-latest}
+    container_name: ekontrak_frontend
+    restart: always
+    environment:
+      APP_NAME:  "eKontrak"
+      APP_ENV:   production
+      APP_KEY:   ${FRONTEND_APP_KEY}
+      APP_DEBUG: "false"
+      APP_URL:   "http://${SERVER_IP}:8000"
+      # Internal Docker network URL — PHP makes server-side calls to the API
+      API_BASE_URL: "http://backend/api/v1"
+      DB_CONNECTION: mysql
+      DB_HOST:       mysql
+      DB_PORT:       3306
+      DB_DATABASE:   ${DB_DATABASE}
+      DB_USERNAME:   ${DB_USERNAME}
+      DB_PASSWORD:   ${DB_PASSWORD}
+      SESSION_DRIVER: file
+    volumes:
+      - frontend_storage:/var/www/html/storage/app
+      - frontend_logs:/var/www/html/storage/logs
+    ports:
+      - "8000:80"
+    depends_on:
+      - backend
+    networks:
+      - ekontrak_net
+
+volumes:
+  mysql_data:
+  backend_storage:
+  backend_logs:
+  frontend_storage:
+  frontend_logs:
+
+networks:
+  ekontrak_net:
+    driver: bridge

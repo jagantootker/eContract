@@ -16,50 +16,44 @@
     <div class="card">
         <div class="card-body p-0">
             <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-slate-50 border-b">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Rujukan</th>
-                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Template</th>
-                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Langkah Semasa</th>
-                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Dikemas Kini</th>
-                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Tindakan</th>
+                <x-table
+                    :headers="['Rujukan', 'Template', 'Langkah Semasa', 'Status', 'Dikemas Kini', 'Tindakan']"
+                    wrap-class="table-scroll"
+                    table-class="w-full"
+                >
+                    @forelse($uploads as $upload)
+                        @php
+                            $currentStep = match($upload->status) {
+                                'DRAFT' => 'Upload / Extraction',
+                                'SEDANG_DISEMAK' => 'Verification',
+                                'DILULUSKAN' => 'Approval',
+                                'DITOLAK' => 'Verification (Rejected)',
+                                'SELESAI' => 'Final',
+                                default => 'Unknown',
+                            };
+                        @endphp
+                        <tr class="hover:bg-slate-50">
+                            <td class="px-6 py-4 text-sm font-medium text-slate-900">{{ $upload->reference_no }}</td>
+                            <td class="px-6 py-4 text-sm text-slate-700">{{ $upload->template_type_label }}</td>
+                            <td class="px-6 py-4 text-sm text-slate-700">{{ $currentStep }}</td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium {{ $upload->status_color }}">{{ $upload->status_label }}</span>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-slate-600">{{ $upload->updated_at->format('d M Y H:i') }}</td>
+                            <td class="px-6 py-4 text-sm">
+                                <a href="{{ route('abm.workflow', $upload->id) }}" class="text-blue-600 hover:text-blue-900 font-medium">Lihat Stepper</a>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y">
-                        @forelse($uploads as $upload)
-                            @php
-                                $currentStep = match($upload->status) {
-                                    'DRAFT' => 'Upload / Extraction',
-                                    'SEDANG_DISEMAK' => 'Verification',
-                                    'DILULUSKAN' => 'Approval',
-                                    'DITOLAK' => 'Verification (Rejected)',
-                                    'SELESAI' => 'Final',
-                                    default => 'Unknown',
-                                };
-                            @endphp
-                            <tr class="hover:bg-slate-50">
-                                <td class="px-6 py-4 text-sm font-medium text-slate-900">{{ $upload->reference_no }}</td>
-                                <td class="px-6 py-4 text-sm text-slate-700">{{ $upload->template_type_label }}</td>
-                                <td class="px-6 py-4 text-sm text-slate-700">{{ $currentStep }}</td>
-                                <td class="px-6 py-4">
-                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium {{ $upload->status_color }}">{{ $upload->status_label }}</span>
-                                </td>
-                                <td class="px-6 py-4 text-sm text-slate-600">{{ $upload->updated_at->format('d M Y H:i') }}</td>
-                                <td class="px-6 py-4 text-sm">
-                                    <a href="{{ route('abm.workflow', $upload->id) }}" class="text-blue-600 hover:text-blue-900 font-medium">Lihat Stepper</a>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="px-6 py-10 text-center text-slate-500">Tiada rekod proses.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="px-6 py-10 text-center text-slate-500">Tiada rekod proses.</td>
+                        </tr>
+                    @endforelse
+                </x-table>
             </div>
-            <div class="px-6 py-4 border-t">{{ $uploads->links() }}</div>
+            <div class="px-6 py-4 border-t border-slate-200 bg-slate-50/80">
+                {{ $uploads->links() }}
+            </div>
         </div>
     </div>
 </div>

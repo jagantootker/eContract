@@ -262,18 +262,18 @@
             #f8fafc;
         min-height: calc(100vh - 120px);
     }
-    
+
     .page-header {
         margin-bottom: 2rem;
     }
-    
+
     .page-header h1 {
         font-size: 1.875rem;
         font-weight: bold;
         color: #111827;
         margin-bottom: 0.5rem;
     }
-    
+
     .card {
         background: rgba(255,255,255,0.9);
         border-radius: 1rem;
@@ -282,17 +282,17 @@
         backdrop-filter: blur(6px);
         overflow: hidden;
     }
-    
+
     .card-header {
         padding: 1.5rem;
         border-bottom: 1px solid #e2e8f0;
         background: #f8fafc;
     }
-    
+
     .card-body {
         padding: 1.5rem;
     }
-    
+
     .btn {
         display: inline-flex;
         align-items: center;
@@ -307,13 +307,13 @@
         cursor: pointer;
         transition: all 0.2s;
     }
-    
+
     .btn-secondary {
         background: #f1f5f9;
         color: #334155;
         border-color: #cbd5e1;
     }
-    
+
     .btn-secondary:hover {
         background: #e2e8f0;
     }

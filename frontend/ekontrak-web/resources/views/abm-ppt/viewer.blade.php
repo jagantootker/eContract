@@ -19,28 +19,23 @@
                         $rows = is_array($upload->extraction_data) ? array_slice($upload->extraction_data, 0, 100) : [];
                         $keys = count($rows) > 0 ? array_keys((array)$rows[0]) : [];
                     @endphp
-                    <table class="w-full">
-                        <thead class="bg-slate-50 border-b">
-                            <tr>
+                    <x-table
+                        :headers="$keys"
+                        wrap-class="table-scroll"
+                        table-class="w-full"
+                    >
+                        @forelse($rows as $row)
+                            <tr class="hover:bg-slate-50">
                                 @foreach($keys as $key)
-                                    <th class="px-4 py-2 text-left text-xs font-semibold text-slate-700 uppercase">{{ str_replace('_', ' ', $key) }}</th>
+                                    <td class="px-4 py-2 text-sm text-slate-800">{{ $row[$key] ?? '-' }}</td>
                                 @endforeach
                             </tr>
-                        </thead>
-                        <tbody class="divide-y">
-                            @forelse($rows as $row)
-                                <tr class="hover:bg-slate-50">
-                                    @foreach($keys as $key)
-                                        <td class="px-4 py-2 text-sm text-slate-800">{{ $row[$key] ?? '-' }}</td>
-                                    @endforeach
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td class="px-4 py-8 text-center text-slate-500">Tiada data dipratonton.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                        @empty
+                            <tr>
+                                <td colspan="{{ max(count($keys), 1) }}" class="px-4 py-8 text-center text-slate-500">Tiada data dipratonton.</td>
+                            </tr>
+                        @endforelse
+                    </x-table>
                 </div>
             @endif
 

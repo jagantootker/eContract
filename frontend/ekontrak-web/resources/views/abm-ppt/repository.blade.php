@@ -78,71 +78,63 @@
                                 <tr class="hover:bg-slate-50">
                                     <td class="px-6 py-4 text-sm font-medium text-slate-900">
                                         {{ $doc->reference_no }}
-                                    </td>
-                                    <td class="px-6 py-4 text-sm text-slate-600">
-                                        {{ $doc->template_type_label }}
-                                    </td>
-                                    <td class="px-6 py-4 text-sm text-slate-600">
-                                        {{ $doc->department ?? '-' }}
-                                    </td>
-                                    <td class="px-6 py-4 text-sm text-slate-600">
-                                        {{ $doc->uploaded_by_name }}
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium {{ $doc->status_color }}">
-                                            {{ $doc->status_label }}
-                                        </span>
-                                    </td>
-                                    <td class="px-6 py-4 text-sm text-slate-600">
-                                        {{ $doc->created_at->format('d M Y') }}
-                                    </td>
-                                    <td class="px-6 py-4 text-sm space-x-2">
-                                        <a href="{{ route('abm.viewer', $doc->id) }}" class="text-blue-600 hover:text-blue-900 font-medium">Lihat</a>
-                                        <a href="{{ route('abm.download', $doc->id) }}" class="text-slate-600 hover:text-slate-900 font-medium">Muat</a>
-                                        <a href="{{ url('/perancangan-perolehan/' . $doc->id . '/workflow') }}" class="text-purple-600 hover:text-purple-900 font-medium">History</a>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7" class="px-6 py-12 text-center text-slate-500">
-                                        Tiada dokumen ditemui
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-                @if($documents->hasPages())
-                    <div class="px-6 py-4 border-t">
-                        {{ $documents->links() }}
-                    </div>
-                @endif
-            </div>
-        </div>
-    </div>
-</div>
-
-<style>
-    .page-wrapper {
-        padding: 2rem;
-        background:
-            radial-gradient(1000px 500px at -20% -30%, rgba(14, 165, 233, 0.14), transparent 60%),
-            radial-gradient(900px 500px at 120% -20%, rgba(59, 130, 246, 0.12), transparent 60%),
+                                        <x-table
+                                            :headers="['Ref No', 'Template', 'Bahagian', 'Dimuat Naik Oleh', 'Status', 'Tarikh', 'Tindakan']"
+                                            wrap-class="table-scroll"
+                                            table-class="w-full"
+                                            tbody-id="documentsTableBody"
+                                        >
+                                            @forelse($documents as $doc)
+                                                <tr class="hover:bg-slate-50">
+                                                    <td class="px-6 py-4 text-sm font-medium text-slate-900">
+                                                        {{ $doc->reference_no }}
+                                                    </td>
+                                                    <td class="px-6 py-4 text-sm text-slate-600">
+                                                        {{ $doc->template_type_label }}
+                                                    </td>
+                                                    <td class="px-6 py-4 text-sm text-slate-600">
+                                                        {{ $doc->department ?? '-' }}
+                                                    </td>
+                                                    <td class="px-6 py-4 text-sm text-slate-600">
+                                                        {{ $doc->uploaded_by_name }}
+                                                    </td>
+                                                    <td class="px-6 py-4">
+                                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium {{ $doc->status_color }}">
+                                                            {{ $doc->status_label }}
+                                                        </span>
+                                                    </td>
+                                                    <td class="px-6 py-4 text-sm text-slate-600">
+                                                        {{ $doc->created_at->format('d M Y') }}
+                                                    </td>
+                                                    <td class="px-6 py-4 text-sm space-x-2">
+                                                        <a href="{{ route('abm.viewer', $doc->id) }}" class="text-blue-600 hover:text-blue-900 font-medium">Lihat</a>
+                                                        <a href="{{ route('abm.download', $doc->id) }}" class="text-slate-600 hover:text-slate-900 font-medium">Muat</a>
+                                                        <a href="{{ url('/perancangan-perolehan/' . $doc->id . '/workflow') }}" class="text-purple-600 hover:text-purple-900 font-medium">History</a>
+                                                    </td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="7" class="px-6 py-12 text-center text-slate-500">
+                                                        Tiada dokumen ditemui
+                                                    </td>
+                                                </tr>
+                                            @endforelse
+                                        </x-table>
             #f8fafc;
         min-height: calc(100vh - 120px);
     }
-    
+
     .page-header {
         margin-bottom: 2rem;
     }
-    
+
     .page-header h1 {
         font-size: 1.875rem;
         font-weight: bold;
         color: #111827;
         margin-bottom: 0.5rem;
     }
-    
+
     .card {
         background: rgba(255,255,255,0.9);
         border-radius: 1rem;
@@ -150,7 +142,7 @@
         box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
         backdrop-filter: blur(6px);
     }
-    
+
     .card-body {
         padding: 1.5rem;
     }
@@ -162,7 +154,7 @@
     document.getElementById('templateFilter')?.addEventListener('change', applyFilters);
     document.getElementById('statusFilter')?.addEventListener('change', applyFilters);
     document.getElementById('yearFilter')?.addEventListener('change', applyFilters);
-    
+
     function applyFilters() {
         // For demo, reload with filter params
         const params = new URLSearchParams();
@@ -170,12 +162,12 @@
         const template = document.getElementById('templateFilter')?.value;
         const status = document.getElementById('statusFilter')?.value;
         const year = document.getElementById('yearFilter')?.value;
-        
+
         if (search) params.append('search', search);
         if (template) params.append('template_type', template);
         if (status) params.append('status', status);
         if (year) params.append('year', year);
-        
+
         if (params.toString()) {
             window.location.href = '{{ url("/perancangan-perolehan/repository") }}?' + params.toString();
         }

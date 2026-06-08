@@ -25,11 +25,11 @@
                         <label class="section-label">Pilih Fail</label>
                         <div class="dropzone" id="dropzone">
                             <input type="file" id="fileInput" name="file" accept=".xlsx,.xls,.pdf" hidden required>
-                            
+
                             <svg class="mx-auto h-12 w-12 text-sky-500 mb-3" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                                 <path d="M28 8H12a4 4 0 00-4 4v20a4 4 0 004 4h24a4 4 0 004-4V20m-18-8h8m-4 4v12m-6 4h12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
-                            
+
                             <p class="text-base font-semibold text-slate-900 mb-2">Seret fail di sini atau klik untuk memilih</p>
                             <p class="text-sm text-slate-500">Excel (.xlsx, .xls) atau PDF yang disokong</p>
                             <div class="meta-row">
@@ -53,7 +53,7 @@
                             <span>Jenis Template</span>
                             <span class="text-red-500">*</span>
                         </label>
-                        
+
                         <div class="space-y-2">
                             <div class="template-switch">
                                 <label class="switch-item is-active" id="labelABM" for="groupABM">
@@ -65,7 +65,7 @@
                                     <span>Template PPT</span>
                                 </label>
                             </div>
-                            
+
                             <select id="templateType" name="template_type" class="input-modern" required>
                                 <option value="">Pilih template ABM</option>
                                 <option value="ABM1">ABM 1 - Permohonan Belanja Operasi</option>
@@ -490,28 +490,28 @@
     const templateTypePPT = document.getElementById('templateTypePPT');
     const groupABM = document.getElementById('groupABM');
     const groupPPT = document.getElementById('groupPPT');
-    
+
     // Drag and drop
     dropzone.addEventListener('click', () => fileInput.click());
-    
+
     dropzone.addEventListener('dragover', (e) => {
         e.preventDefault();
         dropzone.classList.add('dragging');
     });
-    
+
     dropzone.addEventListener('dragleave', () => {
         dropzone.classList.remove('dragging');
     });
-    
+
     dropzone.addEventListener('drop', (e) => {
         e.preventDefault();
         dropzone.classList.remove('dragging');
         fileInput.files = e.dataTransfer.files;
         updateFileName();
     });
-    
+
     fileInput.addEventListener('change', updateFileName);
-    
+
     function updateFileName() {
         if (fileInput.files.length > 0) {
             const file = fileInput.files[0];
@@ -519,7 +519,7 @@
             fileName.classList.remove('hidden');
         }
     }
-    
+
     // Template group switching
     groupABM.addEventListener('change', () => {
         templateTypeABM.disabled = false;
@@ -530,7 +530,7 @@
         document.getElementById('labelPPT').classList.remove('is-active');
         templateTypeABM.focus();
     });
-    
+
     groupPPT.addEventListener('change', () => {
         templateTypeABM.disabled = true;
         templateTypeABM.classList.add('hidden');
@@ -540,28 +540,28 @@
         document.getElementById('labelABM').classList.remove('is-active');
         templateTypePPT.focus();
     });
-    
+
     // Form submission
     uploadForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         if (!fileInput.files[0]) {
             showError('Sila pilih fail untuk dimuat naik');
             return;
         }
-        
+
         const templateType = groupABM.checked ? templateTypeABM.value : templateTypePPT.value;
-        
+
         if (!templateType) {
             showError('Sila pilih jenis template');
             return;
         }
-        
+
         const formData = new FormData();
         formData.append('file', fileInput.files[0]);
         formData.append('template_type', templateType);
         formData.append('_token', document.querySelector('input[name="_token"]').value);
-        
+
         try {
             document.getElementById('progressContainer').classList.remove('hidden');
             document.getElementById('submitBtn').disabled = true;
@@ -572,7 +572,7 @@
                 document.getElementById('progressBar').style.width = progressValue + '%';
                 document.getElementById('progressPercent').textContent = progressValue + '%';
             }, 180);
-            
+
             const response = await fetch('{{ url("/perancangan-perolehan/upload") }}', {
                 method: 'POST',
                 body: formData
@@ -581,9 +581,9 @@
             clearInterval(progressTimer);
             document.getElementById('progressBar').style.width = '100%';
             document.getElementById('progressPercent').textContent = '100%';
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 showSuccess('Fail telah dimuat naik dengan berjaya! Data akan diekstrak untuk disahkan.');
                 document.getElementById('previewLink').href = `/perancangan-perolehan/${data.data.id}/preview`;
@@ -607,14 +607,14 @@
             }, 350);
         }
     });
-    
+
     function showError(message) {
         const errorDiv = document.getElementById('errorMessage');
         document.getElementById('errorText').textContent = message;
         errorDiv.classList.remove('hidden');
         document.getElementById('successMessage').classList.add('hidden');
     }
-    
+
     function showSuccess(message) {
         const successDiv = document.getElementById('successMessage');
         document.getElementById('successText').textContent = message;

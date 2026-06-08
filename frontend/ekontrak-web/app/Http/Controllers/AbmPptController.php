@@ -17,6 +17,13 @@ use Carbon\Carbon;
 class AbmPptController extends Controller
 {
     private const DB_FALLBACK_MESSAGE = 'Pangkalan data tidak tersedia (PDO SQLite driver tidak dijumpai). Paparan demo kosong dipaparkan.';
+    private const OBJECT_MAP = [
+        '10000' => 'Emolumen',
+        '20000' => 'Perkhidmatan & Bekalan',
+        '30000' => 'Aset',
+        '40000' => 'Pemberian & Kenaan Tetap',
+        '50000' => 'Lain-Lain',
+    ];
 
     /**
      * Check if user has access to ABM/PPT module (admin or admin_sistem only)
@@ -25,7 +32,7 @@ class AbmPptController extends Controller
     {
         $roles = AuthHelper::roles();
         $hasAccess = in_array('admin', $roles, true) || in_array('admin_sistem', $roles, true);
-        
+
         if (!$hasAccess) {
             abort(403, 'Anda tidak mempunyai akses kepada modul ini.');
         }
@@ -42,36 +49,97 @@ class AbmPptController extends Controller
     {
         $this->checkAccess();
 
+        return $this->dashboardV2();
+    }
+
+    public function dashboardV2(): View
+    {
+        $this->checkAccess();
+
         if (! $this->isDatabaseReady()) {
             $totalUpload = 0;
+            $totalAmount = 0;
+            $totalPrograms = 0;
+            $totalActivities = 0;
+            $pendingReview = 0;
+            $approved = 0;
             $draft = 0;
             $sedangDisemak = 0;
             $diluluskan = 0;
             $ditolak = 0;
             $selesai = 0;
-            $recentActivities = collect();
+            $budgetBreakdown = collect();
+            $departmentComparison = collect();
+            $trend = collect();
             $recentUploads = collect();
+            $recentActivities = collect();
             $dbUnavailableMessage = self::DB_FALLBACK_MESSAGE;
 
             return view('abm-ppt.dashboard', compact(
                 'totalUpload',
+                'totalAmount',
+                'totalPrograms',
+                'totalActivities',
+                'pendingReview',
+                'approved',
                 'draft',
                 'sedangDisemak',
                 'diluluskan',
                 'ditolak',
                 'selesai',
+                'budgetBreakdown',
+                'departmentComparison',
+                'trend',
                 'recentActivities',
                 'recentUploads',
                 'dbUnavailableMessage'
             ));
         }
 
-        $totalUpload = AbmPptUpload::count();
-        $draft = AbmPptUpload::where('status', 'DRAFT')->count();
-        $sedangDisemak = AbmPptUpload::where('status', 'SEDANG_DISEMAK')->count();
-        $diluluskan = AbmPptUpload::where('status', 'DILULUSKAN')->count();
-        $ditolak = AbmPptUpload::where('status', 'DITOLAK')->count();
-        $selesai = AbmPptUpload::where('status', 'SELESAI')->count();
+        $uploads = AbmPptUpload::with('workflowHistory')->orderBy('created_at', 'desc')->get();
+        $totalUpload = $uploads->count();
+        $draft = $uploads->where('status', 'DRAFT')->count();
+        $sedangDisemak = $uploads->where('status', 'SEDANG_DISEMAK')->count();
+        $diluluskan = $uploads->where('status', 'DILULUSKAN')->count();
+        $ditolak = $uploads->where('status', 'DITOLAK')->count();
+        $selesai = $uploads->where('status', 'SELESAI')->count();
+        $pendingReview = $uploads->whereIn('status', ['DRAFT', 'SEDANG_DISEMAK'])->count();
+        $approved = $uploads->whereIn('status', ['DILULUSKAN', 'SELESAI'])->count();
+
+        $records = $this->flattenAbmRows($uploads);
+        $totalAmount = (int) $records->sum(fn (array $row) => $this->normalizeAmount($row['jumlah_dicadang'] ?? $row['jumlah'] ?? 0));
+        $totalPrograms = $records->pluck('program_name')->filter()->unique()->count();
+        $totalActivities = $records->pluck('aktiviti_name')->filter()->count();
+
+        $budgetBreakdown = $records->groupBy('objek_am_code')->map(function (Collection $group, string $code) {
+            return [
+                'code' => $code,
+                'name' => self::OBJECT_MAP[$code] ?? $code,
+                'amount' => (int) $group->sum(fn (array $row) => $this->normalizeAmount($row['jumlah_dicadang'] ?? $row['jumlah'] ?? 0)),
+                'programs' => $group->pluck('program_name')->filter()->unique()->count(),
+            ];
+        })->sortByDesc('amount')->values();
+
+        $departmentComparison = $records->groupBy(fn (array $row) => $row['department'] ?? $row['bahagian'] ?? 'Tidak Dinyatakan')
+            ->map(function (Collection $group, string $department) {
+                return [
+                    'department' => $department,
+                    'amount' => (int) $group->sum(fn (array $row) => $this->normalizeAmount($row['jumlah_dicadang'] ?? $row['jumlah'] ?? 0)),
+                    'activities' => $group->pluck('aktiviti_name')->filter()->unique()->count(),
+                ];
+            })->sortByDesc('amount')->take(4)->values();
+
+        $trend = $uploads->groupBy(fn ($upload) => $upload->created_at?->format('Y') ?? date('Y'))
+            ->map(function (Collection $group, string $year) {
+                $amount = $group->flatMap(fn ($upload) => collect($upload->extraction_data ?? []))
+                    ->sum(fn (array $row) => $this->normalizeAmount($row['jumlah_dicadang'] ?? $row['jumlah'] ?? 0));
+
+                return [
+                    'year' => $year,
+                    'amount' => (int) $amount,
+                    'uploads' => $group->count(),
+                ];
+            })->sortBy('year')->values();
 
         $recentActivities = AbmPptWorkflowHistory::with('upload')
             ->orderBy('created_at', 'desc')
@@ -84,11 +152,19 @@ class AbmPptController extends Controller
 
         return view('abm-ppt.dashboard', compact(
             'totalUpload',
+            'totalAmount',
+            'totalPrograms',
+            'totalActivities',
+            'pendingReview',
+            'approved',
             'draft',
             'sedangDisemak',
             'diluluskan',
             'ditolak',
             'selesai',
+            'budgetBreakdown',
+            'departmentComparison',
+            'trend',
             'recentActivities',
             'recentUploads'
         ));
@@ -104,7 +180,12 @@ class AbmPptController extends Controller
     public function uploadPage(): View
     {
         $this->checkAccess();
-        return view('abm-ppt.upload');
+        return view('abm-v2.import');
+    }
+
+    public function importV2(): View
+    {
+        return $this->uploadPage();
     }
 
     /**
@@ -376,13 +457,76 @@ class AbmPptController extends Controller
         if (! $this->isDatabaseReady()) {
             $documents = $this->emptyPaginator(15);
             $dbUnavailableMessage = self::DB_FALLBACK_MESSAGE;
-            return view('abm-ppt.repository', compact('documents', 'dbUnavailableMessage'));
+            return view('abm-v2.repository', compact('documents', 'dbUnavailableMessage'));
         }
 
-        $documents = AbmPptUpload::orderBy('created_at', 'desc')
-            ->paginate(15);
+        $documents = AbmPptUpload::orderBy('created_at', 'desc')->paginate(15);
 
-        return view('abm-ppt.repository', compact('documents'));
+        return view('abm-v2.repository', compact('documents'));
+    }
+
+    public function repositoryV2(): View
+    {
+        return $this->repository();
+    }
+
+    public function summaryV2(): View
+    {
+        $this->checkAccess();
+
+        $uploads = $this->isDatabaseReady()
+            ? AbmPptUpload::orderBy('created_at', 'desc')->get()
+            : collect();
+
+        $tree = $this->buildSummaryTree($uploads);
+        $totals = [
+            'files' => $uploads->count(),
+            'objects' => $tree->count(),
+            'programs' => $tree->sum(fn (array $object) => $object['program_count']),
+            'activities' => $tree->sum(fn (array $object) => $object['activity_count']),
+            'amount' => $tree->sum(fn (array $object) => $object['amount']),
+        ];
+
+        return view('abm-v2.summary', compact('tree', 'totals'));
+    }
+
+    public function reviewV2(): View
+    {
+        $this->checkAccess();
+
+        $uploads = $this->isDatabaseReady()
+            ? AbmPptUpload::whereIn('status', ['DRAFT', 'SEDANG_DISEMAK'])->orderBy('updated_at', 'desc')->get()
+            : collect();
+
+        return view('abm-v2.review', [
+            'items' => $uploads,
+        ]);
+    }
+
+    public function approvalV2(): View
+    {
+        $this->checkAccess();
+
+        $uploads = $this->isDatabaseReady()
+            ? AbmPptUpload::whereIn('status', ['DILULUSKAN', 'DITOLAK', 'SELESAI'])->orderBy('updated_at', 'desc')->paginate(12)
+            : $this->emptyPaginator(12);
+
+        return view('abm-v2.approval', [
+            'uploads' => $uploads,
+        ]);
+    }
+
+    public function auditTrailV2(): View
+    {
+        $this->checkAccess();
+
+        $histories = $this->isDatabaseReady()
+            ? AbmPptWorkflowHistory::with('upload')->orderBy('created_at', 'desc')->paginate(20)
+            : $this->emptyPaginator(20);
+
+        return view('abm-v2.audit-trail', [
+            'histories' => $histories,
+        ]);
     }
 
     /**
@@ -588,29 +732,111 @@ class AbmPptController extends Controller
      */
     private function simulateExtraction(AbmPptUpload $upload, $file): array
     {
-        // Demo data - in production, would parse actual file
+        $recordCount = rand(18, 42);
+        $departments = ['Bahagian ICT', 'Bahagian Kewangan', 'Bahagian Perolehan', 'Bahagian Pembangunan', 'Bahagian Undang-Undang'];
+        $ministries = ['Kementerian A', 'Kementerian B', 'Kementerian C'];
+        $objectCodes = array_keys(self::OBJECT_MAP);
+        $programNames = ['Pembangunan Sistem', 'Naik Taraf Infrastruktur', 'Pengurusan Aset', 'Latihan & Kompetensi', 'Audit & Pematuhan'];
+        $activityNames = ['Server Upgrade', 'Security Audit', 'Cloud Migration', 'Perolehan Lesen', 'Penyelenggaraan Tahunan', 'Integrasi Data'];
+        $officers = ['Pn. Siti', 'Encik Ahmad', 'Pn. Fatimah', 'Encik Zainal', 'Pn. Aina', 'Encik Hakim'];
+
         $demoData = [];
 
-        // Generate realistic demo data based on template type
-        $recordCount = rand(5, 20);
-
-        $departments = ['Bahagian Perolehan', 'Bahagian Kewangan', 'Bahagian ICT', 'Bahagian Pembangunan'];
-        $officers = ['Pn. Siti', 'Encik Ahmad', 'Pn. Fatimah', 'Encik Zainal'];
-
         for ($i = 1; $i <= $recordCount; $i++) {
+            $objectCode = $objectCodes[array_rand($objectCodes)];
+            $program = $programNames[array_rand($programNames)];
+            $activity = $activityNames[array_rand($activityNames)];
+            $amount = rand(50000, 2500000);
+
             $demoData[] = [
-                'bilangan' => $i,
-                'tahun' => date('Y'),
-                'bahagian' => $departments[array_rand($departments)],
-                'program' => 'Program ' . chr(64 + rand(1, 5)),
-                'kod_objek' => 'KOD' . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT),
-                'jumlah' => number_format(rand(10000, 500000), 2),
+                'tahun' => (string) date('Y'),
+                'pegawai_pengawal' => 'Pegawai Pengawal ' . rand(1, 5),
+                'kementerian' => $ministries[array_rand($ministries)],
+                'department' => $departments[array_rand($departments)],
+                'objek_am_code' => $objectCode,
+                'objek_am_name' => self::OBJECT_MAP[$objectCode],
+                'program_name' => $program,
+                'aktiviti_name' => $activity,
+                'butiran' => 'Butiran ' . $i,
+                'kod_perkara' => 'P' . str_pad((string) rand(1, 999), 3, '0', STR_PAD_LEFT),
+                'butiran_keterangan' => $upload->template_type_label . ' - ' . $activity,
                 'pegawai' => $officers[array_rand($officers)],
-                'keterangan' => 'Demo data untuk ' . $upload->template_type_label,
+                'jumlah_dicadang' => $amount,
+                'jumlah_disyorkan' => (int) round($amount * 0.9),
+                'jumlah_diluluskan' => (int) round($amount * 0.8),
+                'status' => 'Dicadangkan',
             ];
         }
 
         return $demoData;
+    }
+
+    private function normalizeAmount(mixed $value): int
+    {
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (is_float($value)) {
+            return (int) round($value);
+        }
+
+        if (! is_string($value)) {
+            return 0;
+        }
+
+        return (int) preg_replace('/[^0-9]/', '', $value);
+    }
+
+    private function flattenAbmRows(Collection $uploads): Collection
+    {
+        return $uploads->flatMap(function ($upload) {
+            return collect($upload->extraction_data ?? [])->map(function (array $row) use ($upload) {
+                return array_merge($row, [
+                    'upload_id' => $upload->id,
+                    'reference_no' => $upload->reference_no,
+                    'department' => $row['department'] ?? ($upload->department ?? null),
+                    'template_type' => $upload->template_type,
+                ]);
+            });
+        })->values();
+    }
+
+    private function buildSummaryTree(Collection $uploads): Collection
+    {
+        $rows = $this->flattenAbmRows($uploads);
+
+        return $rows->groupBy('objek_am_code')->map(function (Collection $objectRows, string $objectCode) {
+            $programs = $objectRows->groupBy('program_name')->map(function (Collection $programRows, string $programName) {
+                $activities = $programRows->groupBy('aktiviti_name')->map(function (Collection $activityRows, string $activityName) {
+                    return [
+                        'name' => $activityName,
+                        'count' => $activityRows->count(),
+                        'amount' => (int) $activityRows->sum(fn (array $row) => $this->normalizeAmount($row['jumlah_dicadang'] ?? $row['jumlah'] ?? 0)),
+                        'items' => $activityRows->map(fn (array $row) => [
+                            'butiran' => $row['butiran'] ?? $row['butiran_keterangan'] ?? '-',
+                            'amount' => $this->normalizeAmount($row['jumlah_dicadang'] ?? $row['jumlah'] ?? 0),
+                        ])->values(),
+                    ];
+                })->values();
+
+                return [
+                    'name' => $programName,
+                    'activity_count' => $activities->count(),
+                    'amount' => (int) $programRows->sum(fn (array $row) => $this->normalizeAmount($row['jumlah_dicadang'] ?? $row['jumlah'] ?? 0)),
+                    'activities' => $activities,
+                ];
+            })->values();
+
+            return [
+                'code' => $objectCode,
+                'name' => self::OBJECT_MAP[$objectCode] ?? $objectCode,
+                'program_count' => $programs->count(),
+                'activity_count' => $programs->sum(fn (array $program) => $program['activity_count']),
+                'amount' => (int) $objectRows->sum(fn (array $row) => $this->normalizeAmount($row['jumlah_dicadang'] ?? $row['jumlah'] ?? 0)),
+                'programs' => $programs,
+            ];
+        })->values();
     }
 
     // ═══════════════════════════════════════════════════════════════════════════

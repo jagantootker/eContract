@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('performed_by_name')->nullable();
             $table->text('metadata')->nullable()->comment('JSON additional data');
             $table->timestamps();
-            
+
             $table->index('upload_id');
             $table->index('created_at');
         });

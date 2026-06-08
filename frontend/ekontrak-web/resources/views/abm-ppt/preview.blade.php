@@ -310,7 +310,7 @@
             linear-gradient(180deg, #f8fbff 0%, #f1f5f9 100%);
         min-height: calc(100vh - 120px);
     }
-    
+
     .page-header {
         margin-bottom: 2rem;
         display: flex;
@@ -327,7 +327,7 @@
         font-weight: 700;
         margin-bottom: 0.35rem;
     }
-    
+
     .page-header h1 {
         font-size: 1.875rem;
         font-weight: 800;
@@ -352,7 +352,7 @@
         background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
         box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
     }
-    
+
     .card {
         background: rgba(255, 255, 255, 0.9);
         border-radius: 1rem;
@@ -361,17 +361,17 @@
         backdrop-filter: blur(6px);
         overflow: hidden;
     }
-    
+
     .card-header {
         padding: 1.5rem;
         border-bottom: 1px solid #e2e8f0;
         background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
     }
-    
+
     .card-body {
         padding: 1.5rem;
     }
-    
+
     .record-chip {
         font-size: 0.78rem;
         font-weight: 700;
@@ -447,7 +447,7 @@
     function showEditNotesModal() {
         document.getElementById('editNotesModal').classList.remove('hidden');
     }
-    
+
     function showRejectModal() {
         document.getElementById('rejectModal').classList.remove('hidden');
     }

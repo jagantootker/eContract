@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+*.log
+node_modules
+vendor
+public/build
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/app/public/*
+bootstrap/cache/*.php
+tests/
+README.md
